@@ -45,14 +45,21 @@ resource "google_compute_instance_template" "buildkite_agent" {
     scopes = ["cloud-platform"]
   }
 
-  metadata = {
+  metadata = merge(
+    var.custom_metadata,
+    {
     enable-oslogin         = "FALSE"
     buildkite-token        = var.buildkite_agent_token
     buildkite-token-secret = var.buildkite_agent_token_secret
     buildkite-queue        = var.buildkite_queue
     buildkite-tags         = var.buildkite_agent_tags
     buildkite-api-endpoint = var.buildkite_api_endpoint
-  }
+    vault-address          = var.vault_address
+    vault-secret-path      = var.vault_secret_path
+    vault-gcp-role         = var.vault_gcp_role
+    vault-namespace        = var.vault_namespace
+    }
+  )
 
   metadata_startup_script = templatefile("${path.module}/templates/startup.sh.tftpl", {
     bootstrap_script = file("${path.module}/../../templates/scripts/bootstrap-buildkite-agent")
@@ -62,8 +69,8 @@ resource "google_compute_instance_template" "buildkite_agent" {
     create_before_destroy = true
 
     precondition {
-      condition     = var.buildkite_agent_token != "" || var.buildkite_agent_token_secret != ""
-      error_message = "Either buildkite_agent_token or buildkite_agent_token_secret must be provided."
+      condition     = var.buildkite_agent_token != "" || var.buildkite_agent_token_secret != "" || var.vault_address != ""
+      error_message = "Either buildkite_agent_token, buildkite_agent_token_secret, or vault_address must be provided."
     }
   }
 

@@ -66,6 +66,32 @@ variable "buildkite_agent_token_secret" {
   default     = ""
 }
 
+# Vault Configuration
+
+variable "vault_address" {
+  description = "The URL of the HashiCorp Vault server (e.g., 'https://vault.example.com'). If set, the agent will attempt to fetch its token from Vault."
+  type        = string
+  default     = ""
+}
+
+variable "vault_secret_path" {
+  description = "The path in Vault containing the Buildkite agent token (e.g., 'secret/data/buildkite/agent_token')."
+  type        = string
+  default     = ""
+}
+
+variable "vault_gcp_role" {
+  description = "The Vault role configured for GCP authentication."
+  type        = string
+  default     = ""
+}
+
+variable "vault_namespace" {
+  description = "Optional Vault namespace for Vault Enterprise."
+  type        = string
+  default     = ""
+}
+
 variable "buildkite_queue" {
   description = "Buildkite queue name that agents will listen to. Agents in this stack will only pick up jobs targeting this queue."
   type        = string
@@ -452,6 +478,12 @@ variable "enable_integrity_monitoring" {
 
 variable "labels" {
   description = "Additional labels to apply to all resources for organization and billing"
+  type        = map(string)
+  default     = {}
+}
+
+variable "custom_metadata" {
+  description = "A map of custom metadata to add to the instance template."
   type        = map(string)
   default     = {}
 }

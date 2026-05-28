@@ -24,6 +24,30 @@ module "elastic-ci-stack-for-gcp" {
 }
 ```
 
+## Secret Management
+
+The stack supports three ways to manage your Buildkite agent token:
+
+1. **Plain Text (Not recommended for production):** Provide the token directly via the `buildkite_agent_token` variable.
+2. **GCP Secret Manager (Recommended):** Provide the full resource name of a secret in GCP Secret Manager via `buildkite_agent_token_secret`.
+3. **HashiCorp Vault:** Fetch the token from HashiCorp Vault using the GCP Auth Method. This requires building an image with the Vault CLI installed (included in the updated Packer template).
+
+### Vault Configuration Example
+
+```hcl
+module "elastic-ci-stack-for-gcp" {
+  source = "buildkite/elastic-ci-stack-for-gcp/buildkite"
+
+  project_id                  = "your-gcp-project"
+  buildkite_organization_slug = "your-org-slug"
+
+  # Vault Configuration
+  vault_address     = "https://vault.example.com"
+  vault_secret_path = "secret/data/buildkite/agent_token"
+  vault_gcp_role    = "buildkite-agent-role"
+}
+```
+
 ## Contributing
 
 See [Contributing Guidelines](CONTRIBUTING.md).

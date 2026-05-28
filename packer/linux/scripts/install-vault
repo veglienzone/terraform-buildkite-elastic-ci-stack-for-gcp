@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Set non-interactive mode for apt operations
+export DEBIAN_FRONTEND=noninteractive
+export DEBCONF_NONINTERACTIVE_SEEN=true
+
+echo "Installing HashiCorp Vault CLI..."
+
+# Install gnupg and software-properties-common if not present
+sudo -E apt-get update -y
+sudo -E apt-get install -yq gnupg software-properties-common curl
+
+# Add HashiCorp GPG key
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+# Add HashiCorp repository
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+# Update and install Vault
+sudo -E apt-get update -y
+sudo -E apt-get install -yq vault
+
+# Verify installation
+vault version
+
+echo "Vault CLI installation complete."

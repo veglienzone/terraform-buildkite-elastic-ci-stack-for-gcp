@@ -165,6 +165,11 @@ build {
     script = "scripts/install-gcp-tools"
   }
 
+  # HashiCorp Vault CLI for secret management
+  provisioner "shell" {
+    script = "scripts/install-vault"
+  }
+
   # Google Cloud Ops Agent for centralized logging and monitoring
   provisioner "shell" {
     script = "scripts/install-ops-agent"

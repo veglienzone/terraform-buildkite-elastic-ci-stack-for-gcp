@@ -1,0 +1,13 @@
+project_id                  = "my-gcp-project"
+region                      = "us-central1"
+stack_name                  = "buildkite-vault"
+buildkite_organization_slug = "my-org"
+
+# Vault Configuration
+vault_address     = "https://vault.example.com"
+vault_secret_path = "secret/data/buildkite/agent_token"
+vault_gcp_role    = "buildkite-agent-role"
+# vault_namespace = "admin/my-namespace" # Optional
+
+# Image must have vault CLI installed
+image = "projects/my-gcp-project/global/images/buildkite-ci-stack-vault-v1"

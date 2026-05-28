@@ -59,6 +59,14 @@ module "compute" {
   buildkite_agent_tags         = var.buildkite_agent_tags
   buildkite_api_endpoint       = var.buildkite_api_endpoint
 
+  # Vault configuration
+  vault_address     = var.vault_address
+  vault_secret_path = var.vault_secret_path
+  vault_gcp_role    = var.vault_gcp_role
+  vault_namespace   = var.vault_namespace
+
+  custom_metadata   = var.custom_metadata
+
   # Instance configuration
   machine_type      = var.machine_type
   image             = var.image

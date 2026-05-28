@@ -15,11 +15,45 @@ get_metadata() {
         "http://metadata.google.internal/computeMetadata/v1/instance/attributes/$key" 2>/dev/null || echo "$default"
 }
 
-# Get Buildkite agent token - either directly or from Secret Manager
+# Get Buildkite agent token - either directly, from Secret Manager, or from Vault
 BUILDKITE_TOKEN=$(get_metadata "buildkite-token")
 BUILDKITE_TOKEN_SECRET=$(get_metadata "buildkite-token-secret")
 
-if [[ -n "$BUILDKITE_TOKEN_SECRET" ]]; then
+# Vault configuration from metadata
+VAULT_ADDR=$(get_metadata "vault-address")
+VAULT_SECRET_PATH=$(get_metadata "vault-secret-path")
+VAULT_GCP_ROLE=$(get_metadata "vault-gcp-role")
+VAULT_NAMESPACE=$(get_metadata "vault-namespace")
+
+if [[ -n "$VAULT_ADDR" ]]; then
+    echo "Fetching Buildkite agent token from HashiCorp Vault..."
+    export VAULT_ADDR
+    if [[ -n "$VAULT_NAMESPACE" ]]; then
+        export VAULT_NAMESPACE
+    fi
+
+    echo "Authenticating with Vault using GCP method (role: $VAULT_GCP_ROLE)..."
+    if ! vault login -method=gcp role="$VAULT_GCP_ROLE" > /dev/null; then
+        echo "ERROR: Failed to authenticate with Vault"
+        exit 1
+    fi
+
+    echo "Retrieving secret from $VAULT_SECRET_PATH..."
+    # Attempt to get the 'token' field from the secret path
+    BUILDKITE_TOKEN=$(vault kv get -field=agent-token "$VAULT_SECRET_PATH")
+
+    # Custom Hook: Pre-start
+    HOOK_PRE_START=$(get_metadata "buildkite-agent-hook-pre-start")
+    if [[ -n "$HOOK_PRE_START" ]]; then
+        echo "Running custom pre-start hook..."
+        eval "$HOOK_PRE_START"
+    fi
+    
+    if [[ -z "$BUILDKITE_TOKEN" ]]; then
+        echo "ERROR: Failed to retrieve 'token' field from Vault path: $VAULT_SECRET_PATH"
+        exit 1
+    fi
+elif [[ -n "$BUILDKITE_TOKEN_SECRET" ]]; then
     echo "Fetching Buildkite agent token from Secret Manager..."
     # Use the full resource name directly as the positional argument to gcloud
     # e.g., "projects/my-project/secrets/my-secret/versions/latest"
