@@ -201,6 +201,35 @@ variable "network_name" {
   }
 }
 
+variable "network_id" {
+  description = "ID or self_link of an existing VPC network. If provided, a new network will not be created."
+  type        = string
+  default     = null
+}
+
+variable "subnet_self_links" {
+  description = "List of self_links for existing subnets. If provided, new subnets will not be created. Exactly two subnets are expected if this list is not empty."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = length(var.subnet_self_links) == 0 || length(var.subnet_self_links) == 2
+    error_message = "If subnet_self_links are provided, exactly two subnets must be specified."
+  }
+}
+
+variable "create_firewall_rules" {
+  description = "Toggle for creating agent firewall rules. If false, the user must manage firewall rules externally."
+  type        = bool
+  default     = true
+}
+
+variable "create_nat" {
+  description = "Toggle for creating Cloud Router and NAT gateway. Set to false if NAT is managed externally."
+  type        = bool
+  default     = true
+}
+
 variable "enable_ssh_access" {
   description = "Enable SSH access to instances via firewall rule. Set to false for additional security."
   type        = bool

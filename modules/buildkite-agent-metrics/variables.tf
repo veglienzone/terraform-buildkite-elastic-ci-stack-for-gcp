@@ -99,3 +99,9 @@ variable "function_source_object" {
   type        = string
   default     = "buildkite-agent-metrics/cloud-function-latest.zip"
 }
+
+variable "create_service_account" {
+  description = "Explicit toggle to create service account"
+  type        = bool
+  default     = true
+}

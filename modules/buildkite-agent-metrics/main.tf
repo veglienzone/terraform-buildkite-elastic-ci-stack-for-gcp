@@ -27,7 +27,7 @@ resource "null_resource" "token_validation" {
 
 # Create service account if not provided
 resource "google_service_account" "metrics_function" {
-  count        = local.create_service_account ? 1 : 0
+  count        = var.create_service_account ? 1 : 0
   account_id   = local.service_account_id
   display_name = "Buildkite Agent Metrics Cloud Function"
   description  = "Service account for Buildkite agent metrics collection Cloud Function"
@@ -36,7 +36,7 @@ resource "google_service_account" "metrics_function" {
 
 # Grant necessary permissions to the service account (only if we created it)
 resource "google_project_iam_member" "metrics_writer" {
-  count   = local.create_service_account ? 1 : 0
+  count   = var.create_service_account ? 1 : 0
   project = var.project_id
   role    = "roles/monitoring.metricWriter"
   member  = "serviceAccount:${local.service_account_email}"
@@ -44,7 +44,7 @@ resource "google_project_iam_member" "metrics_writer" {
 
 # Grant Secret Manager access if using secret (only if we created the SA)
 resource "google_project_iam_member" "secret_accessor" {
-  count   = local.create_service_account && local.use_secret_manager ? 1 : 0
+  count   = var.create_service_account && local.use_secret_manager ? 1 : 0
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${local.service_account_email}"

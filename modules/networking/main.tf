@@ -1,7 +1,28 @@
 # GCP Networking Module for Elastic CI Stack
 
+locals {
+  network_id   = var.network_id != null ? var.network_id : google_compute_network.vpc[0].id
+  network_name = var.network_id != null ? split("/", var.network_id)[length(split("/", var.network_id)) - 1] : google_compute_network.vpc[0].name
+
+  # Determine subnet CIDRs for firewall rules
+  subnet_cidrs = length(var.subnet_self_links) > 0 ? data.google_compute_subnetwork.existing_subnets[*].ip_cidr_range : [
+    google_compute_subnetwork.subnet_0[0].ip_cidr_range,
+    google_compute_subnetwork.subnet_1[0].ip_cidr_range
+  ]
+}
+
+# Fetch info about existing subnets if provided
+data "google_compute_subnetwork" "existing_subnets" {
+  count     = length(var.subnet_self_links)
+  name      = split("/", var.subnet_self_links[count.index])[length(split("/", var.subnet_self_links[count.index])) - 1]
+  region    = var.region
+  project   = var.project_id
+}
+
 # VPC Network (equivalent to AWS VPC)
 resource "google_compute_network" "vpc" {
+  count = var.network_id == null ? 1 : 0
+
   project                 = var.project_id
   name                    = var.network_name
   auto_create_subnetworks = false
@@ -13,19 +34,23 @@ resource "google_compute_network" "vpc" {
 
 # Cloud Router for NAT Gateway
 resource "google_compute_router" "router" {
+  count = var.create_nat ? 1 : 0
+
   project = var.project_id
   name    = "${var.network_name}-router"
   region  = var.region
-  network = google_compute_network.vpc.id
+  network = local.network_id
 
   description = "Router for NAT gateway"
 }
 
 # Cloud NAT (equivalent to AWS Internet Gateway + NAT Gateway)
 resource "google_compute_router_nat" "nat" {
+  count = var.create_nat ? 1 : 0
+
   project                            = var.project_id
   name                               = "${var.network_name}-nat"
-  router                             = google_compute_router.router.name
+  router                             = google_compute_router.router[0].name
   region                             = var.region
   nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
@@ -38,11 +63,13 @@ resource "google_compute_router_nat" "nat" {
 
 # Subnet 0 (equivalent to AWS Subnet0 - 10.0.1.0/24)
 resource "google_compute_subnetwork" "subnet_0" {
+  count = length(var.subnet_self_links) == 0 ? 1 : 0
+
   project       = var.project_id
   name          = "${var.network_name}-subnet-0"
   ip_cidr_range = "10.0.1.0/24"
   region        = var.region
-  network       = google_compute_network.vpc.id
+  network       = local.network_id
 
   description = "First subnet for Elastic CI Stack instances"
 
@@ -69,11 +96,13 @@ resource "google_compute_subnetwork" "subnet_0" {
 
 # Subnet 1 (equivalent to AWS Subnet1 - 10.0.2.0/24)
 resource "google_compute_subnetwork" "subnet_1" {
+  count = length(var.subnet_self_links) == 0 ? 1 : 0
+
   project       = var.project_id
   name          = "${var.network_name}-subnet-1"
   ip_cidr_range = "10.0.2.0/24"
   region        = var.region
-  network       = google_compute_network.vpc.id
+  network       = local.network_id
 
   description = "Second subnet for Elastic CI Stack instances"
 
@@ -100,11 +129,11 @@ resource "google_compute_subnetwork" "subnet_1" {
 
 # Firewall rule for SSH access (equivalent to AWS SecurityGroupSshIngress)
 resource "google_compute_firewall" "ssh_ingress" {
-  count = var.enable_ssh_access ? 1 : 0
+  count = var.create_firewall_rules && var.enable_ssh_access ? 1 : 0
 
   project = var.project_id
   name    = "${var.network_name}-allow-ssh"
-  network = google_compute_network.vpc.name
+  network = local.network_id
 
   description = "Allow SSH access to compute instances"
 
@@ -119,9 +148,11 @@ resource "google_compute_firewall" "ssh_ingress" {
 
 # Firewall rule for internal communication
 resource "google_compute_firewall" "internal" {
+  count = var.create_firewall_rules ? 1 : 0
+
   project = var.project_id
   name    = "${var.network_name}-allow-internal"
-  network = google_compute_network.vpc.name
+  network = local.network_id
 
   description = "Allow internal communication between instances"
 
@@ -139,19 +170,17 @@ resource "google_compute_firewall" "internal" {
     protocol = "icmp"
   }
 
-  source_ranges = [
-    "10.0.1.0/24", # subnet_0 CIDR
-    "10.0.2.0/24", # subnet_1 CIDR
-  ]
-
-  target_tags = [var.instance_tag]
+  source_ranges = local.subnet_cidrs
+  target_tags   = [var.instance_tag]
 }
 
 # Firewall rule for health checks
 resource "google_compute_firewall" "health_checks" {
+  count = var.create_firewall_rules ? 1 : 0
+
   project = var.project_id
   name    = "${var.network_name}-allow-health-checks"
-  network = google_compute_network.vpc.name
+  network = local.network_id
 
   description = "Allow Google Cloud health checks"
 
@@ -170,11 +199,11 @@ resource "google_compute_firewall" "health_checks" {
 
 # Firewall rule for IAP (Identity-Aware Proxy) if needed
 resource "google_compute_firewall" "iap" {
-  count = var.enable_iap_access ? 1 : 0
+  count = var.create_firewall_rules && var.enable_iap_access ? 1 : 0
 
   project = var.project_id
   name    = "${var.network_name}-allow-iap"
-  network = google_compute_network.vpc.name
+  network = local.network_id
 
   description = "Allow access from Identity-Aware Proxy"
 

@@ -15,7 +15,7 @@ variable "zones" {
   default     = null
 
   validation {
-    condition     = var.zones == null || length(var.zones) > 0
+    condition     = var.zones == null ? true : length(var.zones) > 0
     error_message = "If zones are specified, at least one zone must be provided."
   }
 }

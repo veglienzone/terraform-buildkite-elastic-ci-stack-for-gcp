@@ -18,6 +18,10 @@ module "networking" {
 
   project_id              = var.project_id
   network_name            = local.network_name
+  network_id              = var.network_id
+  subnet_self_links       = var.subnet_self_links
+  create_firewall_rules   = var.create_firewall_rules
+  create_nat              = var.create_nat
   region                  = var.region
   enable_ssh_access       = var.enable_ssh_access
   ssh_source_ranges       = var.ssh_source_ranges
@@ -114,6 +118,7 @@ module "buildkite_metrics" {
   buildkite_agent_token_secret = var.buildkite_agent_token_secret
   buildkite_queue              = var.buildkite_queue
   buildkite_organization_slug  = var.buildkite_organization_slug
+  create_service_account = false
   service_account_email        = module.iam.metrics_service_account_email
 
   labels = var.labels
